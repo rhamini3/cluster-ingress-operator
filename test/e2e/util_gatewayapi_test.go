@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"os"
 
 	sailv1 "github.com/istio-ecosystem/sail-operator/api/v1"
 	v1 "github.com/openshift/api/operatoringress/v1"
