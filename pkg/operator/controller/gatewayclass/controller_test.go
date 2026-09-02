@@ -7,10 +7,7 @@ import (
 	"testing"
 	"time"
 
-<<<<<<< HEAD
-=======
 	"github.com/go-logr/zapr"
->>>>>>> f978184ff (Restore missing zapr log)
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	sailv1 "github.com/istio-ecosystem/sail-operator/api/v1"
@@ -21,6 +18,9 @@ import (
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 
 	networkingv1 "k8s.io/api/networking/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -1125,6 +1125,9 @@ func Test_Reconcile(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			observedCore, recorded := observer.New(zapcore.InfoLevel)
+			log = zapr.NewLogger(zap.New(observedCore))
+
 			fakeClient := fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithStatusSubresource(tc.existingObjects...).
