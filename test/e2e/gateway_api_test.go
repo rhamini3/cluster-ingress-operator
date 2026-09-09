@@ -1602,7 +1602,7 @@ func testGatewayAPIListenerSetIgnored(t *testing.T) {
 
 }
 
-// testGatewayAPIObjects tests that Gateway API objects can be created successfully.
+// testTLSRouteDNS tests that TLSRoute can be successfuly created and tested through DNS.
 func testTLSRouteDNS(t *testing.T) {
 	// Create a test namespace that cleans itself up and sets up its own service account and role binding.
 	ns := createNamespace(t, names.SimpleNameGenerator.GenerateName("test-e2e-gwapi-"))
@@ -1654,7 +1654,6 @@ func testTLSRouteDNS(t *testing.T) {
 	if err = assertRouteConnection(t, hostname, gateway, "tls"); err != nil {
 		t.Fatalf("Failed to observe success status for tlsroute %s: %v", tlsroutename, err)
 	}
-	//time.Sleep(5 * time.Minute)
 
 }
 

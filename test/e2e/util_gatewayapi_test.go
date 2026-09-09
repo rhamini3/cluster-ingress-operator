@@ -1192,9 +1192,9 @@ func assertHttpRouteSuccessful(t *testing.T, namespace, name string, gateway *ga
 	return httproute, nil
 }
 
-// assertHttpRouteConnection checks if the http route of the given name replies successfully,
-// and returns an error if not
-func assertRouteConnection(t *testing.T, hostname string, gateway *gatewayapiv1.Gateway, route string) error {
+// assertRouteConnection checks if the xRoute of the given name and type replies successfully,
+// and returns an error if not.
+func assertRouteConnection(t *testing.T, hostname string, gateway *gatewayapiv1.Gateway, routeType string) error {
 	domain := ""
 
 	// Get gateway listener hostname to use for dnsRecord.
@@ -1225,7 +1225,7 @@ func assertRouteConnection(t *testing.T, hostname string, gateway *gatewayapiv1.
 			if err := wait.PollUntilContextTimeout(context.Background(), 10*time.Second, dnsResolutionTimeout, false, func(ctx context.Context) (bool, error) {
 				_, err := net.LookupHost(hostname)
 				if err != nil {
-					t.Logf("%v waiting for %s route name %s to resolve (%v)", time.Now(), route, hostname, err)
+					t.Logf("%v waiting for %s route's hostname %s to resolve (%v)", time.Now(), routeType, hostname, err)
 					return false, nil
 				}
 				return true, nil
@@ -1276,10 +1276,13 @@ func assertRouteConnection(t *testing.T, hostname string, gateway *gatewayapiv1.
 	t.Logf("Probing %s...", hostname)
 	if err := wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 5*time.Minute, false, func(ctx context.Context) (bool, error) {
 		var err error
-		if route == "http" {
-			statusCode, headers, body, err = getHTTPResponse(client, hostname)
-		} else {
-			statusCode, headers, body, err = getTLSResponse(client, hostname)
+		switch routeType {
+		case "http":
+			statusCode, headers, body, err = getRouteResponse(client, "http://"+hostname)
+		case "tls":
+			statusCode, headers, body, err = getRouteResponse(client, "https://"+hostname)
+		default:
+			t.Fatalf("%s route is not supported", routeType)
 		}
 		if err != nil {
 			t.Logf("GET %s failed: %v, retrying...", hostname, err)
@@ -1303,28 +1306,11 @@ func assertRouteConnection(t *testing.T, hostname string, gateway *gatewayapiv1.
 	return nil
 }
 
-func getHTTPResponse(client *http.Client, name string) (int, http.Header, string, error) {
+func getRouteResponse(client *http.Client, url string) (int, http.Header, string, error) {
 	// Send the HTTP request.
-	response, err := client.Get("http://" + name)
+	response, err := client.Get(url)
 	if err != nil {
-		return 0, nil, "", fmt.Errorf("GET %s failed: %w", name, err)
-	}
-
-	// Close response body.
-	defer response.Body.Close()
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return 0, nil, "", fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	return response.StatusCode, response.Header, string(body), nil
-}
-
-func getTLSResponse(client *http.Client, name string) (int, http.Header, string, error) {
-	// Send the HTTP request.
-	response, err := client.Get("https://" + name)
-	if err != nil {
-		return 0, nil, "", fmt.Errorf("GET %s failed: %w", name, err)
+		return 0, nil, "", fmt.Errorf("GET %s failed: %w", url, err)
 	}
 
 	// Close response body.
@@ -1338,7 +1324,8 @@ func getTLSResponse(client *http.Client, name string) (int, http.Header, string,
 }
 
 // assertTLSRouteSuccessful checks if the tls route was created and has parent conditions that indicate
-// it was accepted successfully.  A parent is usually a gateway.  Returns an error not accepted and/or not resolved.
+// it was accepted successfully.  A parent is usually a gateway. Returns an error if it was not accepted
+// and/or not resolved.
 func assertTLSRouteSuccessful(t *testing.T, namespace, name string, gateway *gatewayapiv1.Gateway) (*gatewayapiv1.TLSRoute, error) {
 	t.Helper()
 
